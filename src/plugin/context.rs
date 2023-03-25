@@ -5,7 +5,7 @@ use std::sync::RwLock;
 
 use rapier::prelude::{
     Aabb as RapierAabb, BroadPhase, CCDSolver, ColliderHandle, ColliderSet, EventHandler,
-    FeatureId, ImpulseJointHandle, ImpulseJointSet, IntegrationParameters, IslandManager,
+    FeatureId, ImpulseJointHandle, ImpulseJointSet, IntegrationParameters, IslandManager, Isometry,
     MultibodyJointHandle, MultibodyJointSet, NarrowPhase, PhysicsHooks, PhysicsPipeline,
     QueryFilter as RapierQueryFilter, QueryPipeline, Ray, Real, RigidBodyHandle, RigidBodySet,
 };
@@ -60,6 +60,7 @@ pub struct RapierWorld {
     pub query_pipeline: QueryPipeline,
     /// The integration parameters, controlling various low-level coefficient of the simulation.
     pub integration_parameters: IntegrationParameters,
+    pub(crate) physics_transform: Isometry<Real>,
     pub(crate) physics_scale: Real,
     #[cfg_attr(feature = "serde-serialize", serde(skip))]
     pub(crate) event_handler: Option<Box<dyn EventHandler>>,
@@ -865,6 +866,7 @@ impl Default for RapierWorld {
             query_pipeline: QueryPipeline::new(),
             integration_parameters: IntegrationParameters::default(),
             physics_scale: 1.0,
+            physics_transform: Isometry::identity(),
             event_handler: None,
             last_body_transform_set: HashMap::new(),
             entity2body: HashMap::new(),

@@ -225,6 +225,7 @@ pub fn apply_collider_user_changes(
                 co.set_position(utils::transform_to_iso(
                     &transform.compute_transform(),
                     world.physics_scale,
+                    &world.physics_transform,
                 ))
             }
         }
@@ -586,6 +587,7 @@ pub fn apply_rigid_body_user_changes(
                         rb.set_next_kinematic_position(utils::transform_to_iso(
                             &global_transform.compute_transform(),
                             world.physics_scale,
+                            &world.physics_transform,
                         ));
                         world
                             .last_body_transform_set
@@ -602,6 +604,7 @@ pub fn apply_rigid_body_user_changes(
                             utils::transform_to_iso(
                                 &global_transform.compute_transform(),
                                 world.physics_scale,
+                                &world.physics_transform,
                             ),
                             true,
                         );
@@ -784,8 +787,11 @@ pub fn writeback_rigid_bodies(
             // by physics (for example because they are sleeping).
             if let Some(handle) = world.entity2body.get(&entity).copied() {
                 if let Some(rb) = world.bodies.get(handle) {
-                    let mut interpolated_pos =
-                        utils::iso_to_transform(rb.position(), world.physics_scale);
+                    let mut interpolated_pos = utils::iso_to_transform(
+                        rb.position(),
+                        world.physics_scale,
+                        &world.physics_transform,
+                    );
 
                     if let TimestepMode::Interpolated { dt, .. } = config.timestep_mode {
                         if let Some(interpolation) = interpolation.as_deref_mut() {
@@ -796,8 +802,11 @@ pub fn writeback_rigid_bodies(
                             if let Some(interpolated) =
                                 interpolation.lerp_slerp((dt + sim_to_render_time.diff) / dt)
                             {
-                                interpolated_pos =
-                                    utils::iso_to_transform(&interpolated, world.physics_scale);
+                                interpolated_pos = utils::iso_to_transform(
+                                    &interpolated,
+                                    world.physics_scale,
+                                    &world.physics_transform,
+                                );
                             }
                         }
                     }
@@ -1136,7 +1145,11 @@ pub fn init_colliders(
         builder = builder.user_data(entity.to_bits() as u128);
 
         let handle = if let Some(body_handle) = body_handle {
-            builder = builder.position(utils::transform_to_iso(&child_transform, physics_scale));
+            builder = builder.position(utils::transform_to_iso(
+                &child_transform,
+                physics_scale,
+                &world.physics_transform,
+            ));
             let handle =
                 world
                     .colliders
@@ -1157,6 +1170,7 @@ pub fn init_colliders(
             builder = builder.position(utils::transform_to_iso(
                 &global_transform.compute_transform(),
                 physics_scale,
+                &world.physics_transform,
             ));
             world.colliders.insert(builder)
         };
@@ -1202,6 +1216,7 @@ pub fn init_rigid_bodies(
             builder = builder.position(utils::transform_to_iso(
                 &transform.compute_transform(),
                 physics_scale,
+                &world.physics_transform,
             ));
         }
 
@@ -1644,9 +1659,11 @@ pub fn update_character_controls(
                 if let Some(body) = body_handle.and_then(|h| world.bodies.get(h.0)) {
                     shape_pos = body.position() * shape_pos
                 } else if let Some(gtransform) = glob_transform {
-                    shape_pos =
-                        utils::transform_to_iso(&gtransform.compute_transform(), physics_scale)
-                            * shape_pos
+                    shape_pos = utils::transform_to_iso(
+                        &gtransform.compute_transform(),
+                        physics_scale,
+                        &world.physics_transform,
+                    ) * shape_pos
                 }
 
                 (&*scaled_shape.raw, shape_pos)
@@ -1974,8 +1991,11 @@ mod tests {
 
             let child_handle = world.entity2body[&child];
             let child_body = world.bodies.get(child_handle).unwrap();
-            let body_transform =
-                utils::iso_to_transform(child_body.position(), world.physics_scale);
+            let body_transform = utils::iso_to_transform(
+                child_body.position(),
+                world.physics_scale,
+                &world.physics_transform,
+            );
             assert_eq!(
                 GlobalTransform::from(body_transform),
                 *child_transform,
@@ -2041,8 +2061,11 @@ mod tests {
             let parent_body = world.bodies.get(parent_handle).unwrap();
             let child_collider_handle = parent_body.colliders()[0];
             let child_collider = world.colliders.get(child_collider_handle).unwrap();
-            let body_transform =
-                utils::iso_to_transform(child_collider.position(), world.physics_scale);
+            let body_transform = utils::iso_to_transform(
+                child_collider.position(),
+                world.physics_scale,
+                &world.physics_transform,
+            );
             approx::assert_relative_eq!(
                 body_transform.translation,
                 child_transform.translation,
