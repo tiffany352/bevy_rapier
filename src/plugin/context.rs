@@ -21,6 +21,8 @@ use crate::control::{CharacterCollision, MoveShapeOptions, MoveShapeOutput};
 use crate::dynamics::TransformInterpolation;
 use crate::plugin::configuration::{SimulationToRenderTime, TimestepMode};
 use crate::prelude::{CollisionEvent, CollisionGroups, ContactForceEvent, RapierRigidBodyHandle};
+#[cfg(feature = "dim3")]
+use bevy::math::Affine3A;
 #[cfg(feature = "dim2")]
 use bevy::math::Vec3Swizzles;
 use rapier::control::CharacterAutostep;
@@ -973,6 +975,22 @@ impl RapierContext {
             .get(&world_id)
             .map(|x| x.physics_scale)
             .ok_or(WorldError::WorldNotFound { world_id })
+    }
+
+    /// Sets the physics transform for this physics world.
+    #[cfg(feature = "dim3")]
+    pub fn set_physics_transform_for_world(
+        &mut self,
+        world_id: WorldId,
+        transform: Affine3A,
+    ) -> Result<(), WorldError> {
+        let world = self.get_world_mut(world_id)?;
+        world.physics_transform = Isometry::new(
+            transform.translation.into(),
+            Quat::from_mat3a(&transform.matrix3).to_scaled_axis().into(),
+        );
+
+        Ok(())
     }
 
     fn get_collider_parent_from_world(
