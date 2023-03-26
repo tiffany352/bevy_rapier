@@ -985,9 +985,9 @@ impl RapierContext {
         transform: Affine3A,
     ) -> Result<(), WorldError> {
         let world = self.get_world_mut(world_id)?;
-        world.physics_transform = Isometry::new(
+        world.physics_transform = Isometry::from_parts(
             transform.translation.into(),
-            Quat::from_mat3a(&transform.matrix3).to_scaled_axis().into(),
+            Quat::from_mat3a(&transform.matrix3).into(),
         );
 
         Ok(())
